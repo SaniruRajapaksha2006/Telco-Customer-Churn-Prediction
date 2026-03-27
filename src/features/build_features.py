@@ -69,19 +69,18 @@ class FeatureEngineer:
                 df_scaled[numerical_cols] = self.scaler.transform(df_scaled[numerical_cols])
         
         return df_scaled
-    
+
     def prepare_data(self, df, target_col='Churn', fit=True):
         """Complete preprocessing pipeline"""
-        # Clean data first
-        from src.data.make_dataset import clean_data
-        df = clean_data(df)
-        
+        # Don't clean again - assume data is already cleaned
+        # df is already cleaned from train.py
+
         # Encode binary features
         df = self.encode_binary_features(df, fit=fit)
-        
+
         # One-hot encode multi-category features
         df = self.one_hot_encode(df, fit=fit)
-        
+
         # Encode target
         if target_col in df.columns:
             le_target = LabelEncoder()
@@ -89,10 +88,10 @@ class FeatureEngineer:
             df = df.drop(target_col, axis=1)
         else:
             y = None
-        
+
         # Scale features
         df = self.scale_features(df, fit=fit)
-        
+
         return df, y
     
     def apply_smote(self, X, y):

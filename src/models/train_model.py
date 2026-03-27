@@ -77,9 +77,12 @@ class ModelTrainer:
         logger.info(f"Validation accuracy: {best_result['val_accuracy']:.4f}")
         
         return best_result['alpha']
-    
+
     def build_neural_network(self, input_shape):
         """Build Neural Network architecture"""
+        # Use legacy Adam for Mac M1/M2 compatibility
+        from tensorflow.keras.optimizers import legacy
+
         model = Sequential([
             Dense(128, activation='relu', input_shape=input_shape),
             BatchNormalization(),
@@ -92,27 +95,33 @@ class ModelTrainer:
             Dropout(0.1),
             Dense(1, activation='sigmoid')
         ])
-        
+
         model.compile(
-            optimizer=Adam(learning_rate=0.001),
+            optimizer=legacy.Adam(learning_rate=0.001),
             loss='binary_crossentropy',
             metrics=['accuracy', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()]
         )
-        
+
         return model
-    
-    def train_neural_network(self, X_train, y_train, X_val, y_val, 
-                            input_shape, epochs=100, batch_size=32):
+
+    def train_neural_network(self, X_train, y_train, X_val, y_val,
+                             input_shape, epochs=100, batch_size=32):
         """Train Neural Network with callbacks"""
         logger.info("Training Neural Network...")
-        
+
+        # Convert to float32 explicitly for TensorFlow
+        X_train = np.array(X_train).astype(np.float32)
+        X_val = np.array(X_val).astype(np.float32)
+        y_train = np.array(y_train).astype(np.float32)
+        y_val = np.array(y_val).astype(np.float32)
+
         model = self.build_neural_network(input_shape)
-        
+
         callbacks = [
             EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True),
             ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=0.0001)
         ]
-        
+
         history = model.fit(
             X_train, y_train,
             validation_data=(X_val, y_val),
@@ -121,14 +130,19 @@ class ModelTrainer:
             callbacks=callbacks,
             verbose=1
         )
-        
+
         self.models['Neural Network'] = model
         logger.info(f"Neural Network training complete - Stopped at epoch {len(history.history['loss'])}")
-        
+
         return model, history
-    
+
     def evaluate_model(self, model, X_test, y_test, model_name):
         """Comprehensive model evaluation"""
+        # Convert to float32 for Neural Network
+        if model_name == "Neural Network":
+            X_test = np.array(X_test).astype(np.float32)
+            y_test = np.array(y_test).astype(np.float32)
+
         # Get predictions
         if hasattr(model, 'predict_proba'):
             y_pred = model.predict(X_test)
@@ -136,7 +150,7 @@ class ModelTrainer:
         else:
             y_prob = model.predict(X_test).flatten()
             y_pred = (y_prob > 0.5).astype(int)
-        
+
         # Calculate metrics
         metrics = {
             'accuracy': accuracy_score(y_test, y_pred),
@@ -145,16 +159,16 @@ class ModelTrainer:
             'f1_score': f1_score(y_test, y_pred),
             'roc_auc': roc_auc_score(y_test, y_prob)
         }
-        
+
         self.results[model_name] = metrics
-        
+
         logger.info(f"{model_name} - Acc: {metrics['accuracy']:.4f}, "
-                   f"Prec: {metrics['precision']:.4f}, Rec: {metrics['recall']:.4f}, "
-                   f"F1: {metrics['f1_score']:.4f}, AUC: {metrics['roc_auc']:.4f}")
-        
+                    f"Prec: {metrics['precision']:.4f}, Rec: {metrics['recall']:.4f}, "
+                    f"F1: {metrics['f1_score']:.4f}, AUC: {metrics['roc_auc']:.4f}")
+
         # Print classification report
         print(f"\n{classification_report(y_test, y_pred, target_names=['No Churn', 'Churn'])}")
-        
+
         return metrics, y_pred, y_prob
     
     def get_feature_importance(self, model, feature_names):

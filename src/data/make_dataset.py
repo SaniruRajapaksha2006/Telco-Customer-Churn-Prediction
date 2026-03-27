@@ -17,24 +17,28 @@ def load_data(file_path):
     print(f"Dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
     return df
 
+
 def clean_data(df):
     """Clean the dataset"""
     logger.info("Starting data cleaning")
     df_clean = df.copy()
-    
+
     # Convert TotalCharges to numeric
     df_clean['TotalCharges'] = pd.to_numeric(df_clean['TotalCharges'], errors='coerce')
-    
+
     # Fill missing TotalCharges with 0
-    missing_after = df_clean['TotalCharges'].isnull().sum()
-    if missing_after > 0:
-        logger.info(f"Filling {missing_after} missing values with 0")
+    missing_count = df_clean['TotalCharges'].isnull().sum()
+    if missing_count > 0:
+        logger.info(f"Filling {missing_count} missing values with 0")
         df_clean['TotalCharges'].fillna(0, inplace=True)
-    
-    # Remove customerID for privacy
-    df_clean = df_clean.drop('customerID', axis=1)
-    logger.info("Removed customerID column")
-    
+
+    # Remove customerID for privacy (only if it exists)
+    if 'customerID' in df_clean.columns:
+        df_clean = df_clean.drop('customerID', axis=1)
+        logger.info("Removed customerID column")
+    else:
+        logger.info("customerID column already removed")
+
     return df_clean
 
 def get_data_info(df):

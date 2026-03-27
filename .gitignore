@@ -7,3 +7,5 @@ venv/
 *.joblib
 data/raw/*.csv
 .ipynb_checkpoints/
+temp_code.py
+check_setup.py
