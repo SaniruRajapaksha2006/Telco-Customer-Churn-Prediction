@@ -9,3 +9,8 @@ data/raw/*.csv
 .ipynb_checkpoints/
 temp_code.py
 check_setup.py
+.venv/
+.venv
+models/*.h5
+models/*.pkl
+models/*.joblib
