@@ -11,7 +11,6 @@ from pathlib import Path
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
-
 from src.features.build_features import FeatureEngineer
 
 # Page configuration
@@ -21,23 +20,157 @@ st.set_page_config(
     layout="wide"
 )
 
+# Add custom CSS
+st.markdown("""
+<style>
+    /* Main container styling */
+    .main {
+        padding: 0rem 1rem;
+    }
+
+    /* Headers */
+    h1 {
+        color: #FF4B4B;
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    h2, h3 {
+        color: #262730;
+        font-weight: 600;
+    }
+
+    /* Metric cards */
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        color: white;
+        text-align: center;
+    }
+
+    /* Prediction boxes */
+    .high-risk {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        animation: pulse 2s infinite;
+    }
+
+    .low-risk {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+
+    /* Risk factor list */
+    .risk-factor {
+        background-color: #FFF3E0;
+        border-left: 4px solid #FF4B4B;
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        border-radius: 5px;
+    }
+
+    /* Info boxes */
+    .info-box {
+        background-color: #E8F4FD;
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #00f2fe;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: 600;
+        border: none;
+        padding: 0.5rem 2rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    /* Tabs styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2rem;
+        background-color: #F0F2F6;
+        padding: 0.5rem;
+        border-radius: 10px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+    }
+
+    /* Metrics */
+    .stMetric {
+        background-color: #F0F2F6;
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    /* Success/Error/Warning boxes */
+    .stAlert {
+        border-radius: 10px;
+        border-left: 4px solid;
+    }
+
+    /* Sidebar  */
+    .css-1d391kg {
+        background-color: #F0F2F6;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+# Custom header with logo
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown("""
+    <div style="text-align: center; padding: 1rem;">
+        <h1 style="font-size: 3rem;">📱 Telco Churn Predictor</h1>
+        <p style="font-size: 1.2rem; color: #666;">AI-Powered Customer Retention Intelligence</p>
+    </div>
+    """, unsafe_allow_html=True)
+
 # Load model and preprocessor
+# Update the load_models function
 @st.cache_resource
 def load_models():
     """Load trained models and preprocessor"""
     model_path = Path(__file__).parent.parent / "models"
 
-    # Load Decision Tree (best model)
+    # Load Decision Tree
     dt_model = joblib.load(model_path / "decision_tree.pkl")
 
     # Load preprocessor
-    engineer = FeatureEngineer()
-    engineer.load_artifacts(model_path / "preprocessor.pkl")
+    engineer = joblib.load(model_path / "preprocessor.pkl")
+
+    st.success(
+        f"Models loaded! Preprocessor has {len(engineer.training_columns) if hasattr(engineer, 'training_columns') else '?'} features")
 
     return dt_model, engineer
 
 def main():
-    st.title("📱 Telco Customer Churn Predictor")
+    st.title("Telco Customer Churn Predictor")
 
     st.markdown("""
     ### Predict if a customer will leave the service provider
@@ -52,9 +185,9 @@ def main():
     # Load models
     try:
         model, engineer = load_models()
-        st.success("✅ Models loaded successfully!")
+        st.success("Models loaded successfully!")
     except Exception as e:
-        st.error(f"❌ Error loading models: {e}")
+        st.error(f"Error loading models: {e}")
         st.info("Please run `python train.py` first to train the models.")
         return
 
@@ -134,37 +267,57 @@ def main():
             'TotalCharges': [total_charges]
         })
 
-        if st.button("🔍 Predict Churn Risk", type="primary"):
+        if st.button("Predict Churn Risk", type="primary"):
             try:
-                # Preprocess input
-                X_processed, _ = engineer.prepare_data(input_data, fit=False)
+                # Preprocess input using the prediction method
+                X_processed = engineer.predict_preprocess(input_data, fit=False)
 
                 # Make prediction
                 prediction = model.predict(X_processed)
                 probability = model.predict_proba(X_processed)[0]
 
-                # Display results
+                # Display results with custom styling
                 st.markdown("---")
-                st.subheader("📊 Prediction Results")
+                st.subheader("Prediction Results")
 
-                col_result1, col_result2, col_result3 = st.columns(3)
+                col_result1, col_result2 = st.columns(2)
 
                 with col_result1:
                     if prediction[0] == 1:
-                        st.error("### ⚠️ HIGH RISK")
-                        st.write("**Customer is likely to churn**")
+                        st.markdown(f"""
+                        <div class="high-risk">
+                            <h2 style="color: white; margin: 0;">HIGH RISK</h2>
+                            <p style="color: white; font-size: 1.1rem; margin: 0.5rem 0;">Customer is likely to churn</p>
+                            <p style="color: white; font-size: 0.9rem;">Recommended Action: Immediate Retention Offer</p>
+                        </div>
+                        """, unsafe_allow_html=True)
                     else:
-                        st.success("### ✅ LOW RISK")
-                        st.write("**Customer is likely to stay**")
+                        st.markdown(f"""
+                        <div class="low-risk">
+                            <h2 style="color: white; margin: 0;">LOW RISK</h2>
+                            <p style="color: white; font-size: 1.1rem; margin: 0.5rem 0;">Customer is likely to stay</p>
+                            <p style="color: white; font-size: 0.9rem;">Recommended Action: Standard Engagement</p>
+                        </div>
+                        """, unsafe_allow_html=True)
 
                 with col_result2:
-                    st.metric("Churn Probability", f"{probability[1]:.1%}")
-
-                with col_result3:
-                    st.metric("Retention Probability", f"{probability[0]:.1%}")
+                    # Create a gauge-like display for probability
+                    prob_color = "#f5576c" if probability[1] > 0.5 else "#4facfe"
+                    st.markdown(f"""
+                    <div style="text-align: center; padding: 1rem; background-color: #F0F2F6; border-radius: 10px;">
+                        <p style="font-size: 1rem; margin: 0;">Churn Probability</p>
+                        <div style="position: relative; margin: 1rem 0;">
+                            <div style="width: 100%; height: 20px; background-color: #E0E0E0; border-radius: 10px; overflow: hidden;">
+                                <div style="width: {probability[1] * 100}%; height: 100%; background: linear-gradient(90deg, {prob_color}, #ff6b6b); border-radius: 10px;"></div>
+                            </div>
+                            <p style="font-size: 2rem; font-weight: bold; margin: 0.5rem 0; color: {prob_color};">{probability[1]:.1%}</p>
+                        </div>
+                        <p style="font-size: 1rem; margin: 0;">Retention Probability: <strong>{probability[0]:.1%}</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
                 # Risk factors
-                st.subheader("⚠️ Key Risk Factors")
+                st.subheader("Key Risk Factors")
                 risk_factors = []
 
                 if contract == "Month-to-month":
@@ -186,34 +339,51 @@ def main():
 
                 if risk_factors:
                     for factor in risk_factors:
-                        st.write(factor)
+                        st.markdown(f"""
+                        <div class="risk-factor">
+                            📌 {factor}
+                        </div>
+                        """, unsafe_allow_html=True)
                 else:
-                    st.success("No major risk factors detected! This customer has good retention characteristics.")
+                    st.markdown("""
+                    <div class="info-box">
+                        No major risk factors detected! This customer has good retention characteristics.
+                    </div>
+                    """, unsafe_allow_html=True)
 
                 # Recommendation
-                st.subheader("💡 Recommendation")
+                st.subheader("Recommendations")
                 if prediction[0] == 1:
-                    st.warning("""
-                    **Suggested Actions:**
-                    - Offer contract upgrade incentive (2-year contract)
-                    - Bundle security features
-                    - Provide tech support trial
-                    - Send retention offer
-                    """)
+                    st.markdown("""
+                    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1rem; border-radius: 10px; color: white;">
+                        <strong>Immediate Actions:</strong>
+                        <ul>
+                            <li>Offer contract upgrade incentive (2-year contract with 10% discount)</li>
+                            <li>Bundle security features (free online security + tech support trial)</li>
+                            <li>Schedule retention call within 24 hours</li>
+                            <li>Send personalized offer via email</li>
+                        </ul>
+                    </div>
+                    """, unsafe_allow_html=True)
                 else:
-                    st.info("""
-                    **Maintain Good Practices:**
-                    - Continue current service quality
-                    - Consider loyalty rewards
-                    - Monitor for any service issues
-                    """)
+                    st.markdown("""
+                    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 1rem; border-radius: 10px; color: white;">
+                        <strong>Retention Strategies:</strong>
+                        <ul>
+                            <li>Send loyalty reward email</li>
+                            <li>Offer service upgrade recommendations</li>
+                            <li>Maintain current service quality</li>
+                            <li>Monitor for any service issues</li>
+                        </ul>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"Error making prediction: {e}")
                 st.write("Please check your input values and try again.")
 
     with tab2:
-        st.header("📁 Batch Prediction")
+        st.header("Batch Prediction")
         st.markdown("""
         Upload a CSV file with multiple customers to get predictions in bulk.
         
@@ -232,7 +402,7 @@ def main():
                 st.dataframe(batch_data.head())
                 st.write(f"Total rows: {len(batch_data)}")
 
-                if st.button("🚀 Run Batch Prediction"):
+                if st.button("Run Batch Prediction"):
                     with st.spinner("Processing predictions..."):
                         # Preprocess all data
                         X_processed, _ = engineer.prepare_data(batch_data, fit=False)
@@ -246,11 +416,11 @@ def main():
                         batch_data['Churn_Probability'] = probabilities[:, 1]
                         batch_data['Retention_Probability'] = probabilities[:, 0]
 
-                        st.success("✅ Predictions complete!")
+                        st.success("Predictions complete!")
                         st.dataframe(batch_data)
 
                         # Summary statistics
-                        st.subheader("📊 Summary Statistics")
+                        st.subheader("Summary Statistics")
                         col1, col2, col3 = st.columns(3)
                         churn_count = (batch_data['Churn_Prediction'] == 'Yes').sum()
                         churn_rate = churn_count / len(batch_data) * 100
@@ -265,7 +435,7 @@ def main():
                         # Download button
                         csv = batch_data.to_csv(index=False)
                         st.download_button(
-                            label="📥 Download Results as CSV",
+                            label="Download Results as CSV",
                             data=csv,
                             file_name="churn_predictions.csv",
                             mime="text/csv"
@@ -276,9 +446,9 @@ def main():
                 st.write("Please check that your CSV has the required columns.")
 
     with tab3:
-        st.header("📈 Model Insights")
+        st.header("Model Insights")
 
-        st.subheader("🎯 Top Features Influencing Churn")
+        st.subheader("Top Features Influencing Churn")
         st.markdown("""
         | Rank | Feature | Importance | Insight |
         |------|---------|------------|---------|
@@ -289,14 +459,14 @@ def main():
         | 5 | **MonthlyCharges** | 7.3% | Higher charges = higher churn risk |
         """)
 
-        st.subheader("🔴 High Risk Profiles")
+        st.subheader("High Risk Profiles")
         st.markdown("""
         - **Month-to-month contract + Fiber optic + Electronic check**: 78% churn rate
         - **New customer (<6 months) + High monthly charges (>$80)**: 67% churn rate
         - **Senior citizen + No tech support**: 54% churn rate
         """)
 
-        st.subheader("🟢 Protective Factors")
+        st.subheader("Protective Factors")
         st.markdown("""
         - **Two-year contract**: 97% retention rate
         - **Credit card payment**: 85% retention rate
@@ -304,7 +474,7 @@ def main():
         - **Tech support + Online security**: 15% churn rate
         """)
 
-        st.subheader("💼 Business Recommendations")
+        st.subheader("Business Recommendations")
         st.info("""
         **Based on model insights:**
         
@@ -314,6 +484,15 @@ def main():
         4. **Target new customers** - Enhanced onboarding for first 12 months
         5. **Bundle security features** - Free tech support trial reduces churn
         """)
+
+        # Footer
+        st.markdown("---")
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem; color: #666;">
+            <p>Built using Streamlit | Model: Decision Tree (75.5% accuracy) | Data: Telco Customer Churn Dataset</p>
+            <p>© 2025 R. S. P. S. Uthsara | BSc (Hons) AI & Data Science</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

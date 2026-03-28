@@ -1,6 +1,5 @@
 """
 Data loading and preprocessing module
-Based on CM2604 coursework
 """
 
 import pandas as pd
@@ -32,7 +31,7 @@ def clean_data(df):
         logger.info(f"Filling {missing_count} missing values with 0")
         df_clean['TotalCharges'].fillna(0, inplace=True)
 
-    # Remove customerID for privacy (only if it exists)
+    # Remove customerID for privacy
     if 'customerID' in df_clean.columns:
         df_clean = df_clean.drop('customerID', axis=1)
         logger.info("Removed customerID column")

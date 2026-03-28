@@ -1,11 +1,12 @@
 """
 Main training script
-Run this to train both models
 """
 
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import joblib
+import pickle
 
 from src.data.make_dataset import load_data, clean_data
 from src.features.build_features import FeatureEngineer
@@ -30,6 +31,10 @@ def main():
     print("\n2. Preparing features...")
     engineer = FeatureEngineer()
     X, y = engineer.prepare_data(df, fit=True)
+
+    # Store training columns for later prediction
+    training_columns = list(X.columns)
+    print(f"Training columns: {len(training_columns)} features")
     
     # Split data
     print("\n3. Splitting data...")
@@ -68,12 +73,24 @@ def main():
     print("NEURAL NETWORK RESULTS")
     print("=" * 60)
     nn_metrics, nn_pred, nn_prob = trainer.evaluate_model(nn_model, X_test, y_test, "Neural Network")
-    
-    # Save models
+
+    # Save models and preprocessor
     print("\n8. Saving models...")
+
+    # Save Decision Tree
     trainer.save_model(dt_model, "Decision Tree", models_dir / "decision_tree.pkl")
+
+    # Save Neural Network
     trainer.save_model(nn_model, "Neural Network", models_dir / "neural_network.h5")
-    engineer.save_artifacts(models_dir / "preprocessor.pkl")
+
+    # Save preprocessor as FULL OBJECT (not dict)
+    joblib.dump(engineer, models_dir / "preprocessor.pkl")
+    print("Saved preprocessor (FeatureEngineer object)")
+
+    # Save training columns separately for verification
+    if hasattr(engineer, 'training_columns'):
+        joblib.dump(engineer.training_columns, models_dir / "training_columns.pkl")
+        print(f"Saved {len(engineer.training_columns)} training columns")
     
     # Feature importance
     print("\n9. Feature Importance (Decision Tree):")
@@ -82,7 +99,7 @@ def main():
         print("\nTop 10 Most Important Features:")
         print(importance.head(10))
     
-    print("\n✅ Training complete! Models saved to models/")
+    print("\nTraining complete! Models saved to models/")
     print("\nTo run the web app: streamlit run app/app.py")
 
 if __name__ == "__main__":

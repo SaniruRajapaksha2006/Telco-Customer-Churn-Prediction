@@ -1,6 +1,5 @@
 """
 Feature engineering module
-Based on CM2604 coursework preprocessing
 """
 
 import pandas as pd
@@ -36,7 +35,7 @@ class FeatureEngineer:
                     df_encoded[col] = self.label_encoders[col].transform(df_encoded[col])
         
         return df_encoded
-    
+
     def one_hot_encode(self, df, fit=True):
         """One-hot encode multi-category features"""
         df_encoded = df.copy()
@@ -45,14 +44,18 @@ class FeatureEngineer:
             'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies',
             'Contract', 'PaymentMethod'
         ]
-        
-        # Filter to columns that exist
+
         cols_to_encode = [col for col in multi_cat_cols if col in df_encoded.columns]
-        
+
         if cols_to_encode:
             df_encoded = pd.get_dummies(df_encoded, columns=cols_to_encode, drop_first=True)
+
+            # Store columns during fit
+            if fit:
+                self.one_hot_columns = [col for col in df_encoded.columns if any(c in col for c in cols_to_encode)]
+
             logger.info(f"One-hot encoded {len(cols_to_encode)} columns")
-        
+
         return df_encoded
     
     def scale_features(self, df, fit=True):
@@ -72,9 +75,6 @@ class FeatureEngineer:
 
     def prepare_data(self, df, target_col='Churn', fit=True):
         """Complete preprocessing pipeline"""
-        # Don't clean again - assume data is already cleaned
-        # df is already cleaned from train.py
-
         # Encode binary features
         df = self.encode_binary_features(df, fit=fit)
 
@@ -92,7 +92,39 @@ class FeatureEngineer:
         # Scale features
         df = self.scale_features(df, fit=fit)
 
+        # Store training columns during fit
+        if fit:
+            self.training_columns = list(df.columns)
+            logger.info(f"Stored {len(self.training_columns)} training columns")
+
         return df, y
+
+    def predict_preprocess(self, df, fit=False):
+        """Preprocess data specifically for prediction"""
+        # Make a copy
+        df_processed = df.copy()
+
+        # Encode binary features
+        df_processed = self.encode_binary_features(df_processed, fit=fit)
+
+        # One-hot encode
+        df_processed = self.one_hot_encode(df_processed, fit=fit)
+
+        # Ensure all training columns exist (fill missing with 0)
+        if hasattr(self, 'training_columns'):
+            for col in self.training_columns:
+                if col not in df_processed.columns:
+                    df_processed[col] = 0
+            df_processed = df_processed[self.training_columns]
+
+        # Scale features
+        df_processed = self.scale_features(df_processed, fit=fit)
+
+        return df_processed
+
+    def set_training_columns(self, columns):
+        """Store training columns for prediction"""
+        self.training_columns = columns
     
     def apply_smote(self, X, y):
         """Apply SMOTE for class imbalance"""
@@ -113,19 +145,19 @@ class FeatureEngineer:
         
         logger.info(f"Train size: {X_train.shape[0]}, Test size: {X_test.shape[0]}")
         return X_train, X_test, y_train, y_test
-    
+
     def save_artifacts(self, path):
         """Save preprocessing artifacts"""
-        artifacts = {
-            'label_encoders': self.label_encoders,
-            'scaler': self.scaler
-        }
-        joblib.dump(artifacts, path)
+        # Save the entire object, not just a dict
+        joblib.dump(self, path)
         logger.info(f"Saved artifacts to {path}")
-    
+
     def load_artifacts(self, path):
         """Load preprocessing artifacts"""
-        artifacts = joblib.load(path)
-        self.label_encoders = artifacts['label_encoders']
-        self.scaler = artifacts['scaler']
+        # Load the entire object
+        loaded = joblib.load(path)
+
+        # Copy all attributes
+        self.__dict__.update(loaded.__dict__)
+
         logger.info(f"Loaded artifacts from {path}")

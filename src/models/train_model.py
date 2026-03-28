@@ -80,7 +80,6 @@ class ModelTrainer:
 
     def build_neural_network(self, input_shape):
         """Build Neural Network architecture"""
-        # Use legacy Adam for Mac M1/M2 compatibility
         from tensorflow.keras.optimizers import legacy
 
         model = Sequential([
