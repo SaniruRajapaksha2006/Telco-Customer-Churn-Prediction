@@ -268,7 +268,6 @@ The preprocessing pipeline includes:
 
 ## 🙏 Acknowledgments
 
-- **Module Leader**: Mr. Sahan Priyanayana — for guidance and support
 - **IIT Sri Lanka** — for providing the learning environment and resources
 - **IBM** — for providing the Telco Customer Churn dataset
 - **Open Source Community** — for the amazing tools and libraries
@@ -277,14 +276,13 @@ The preprocessing pipeline includes:
 
 ## 📄 License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 📧 Contact
 
-- **GitHub**: [@Saniru2006](https://github.com/Saniru2006)
-- **Project Link**: [https://github.com/Saniru2006/Telco-Customer-Churn-Prediction](https://github.com/Saniru2006/Telco-Customer-Churn-Prediction)
+- **GitHub**: [@SaniruRajapaksha2006](https://github.com/SaniruRajapaksha2006)
+- **Project Link**: [https://github.com/SaniruRajapaksha2006/Telco-Customer-Churn-Prediction](https://github.com/SaniruRajapaksha2006/Telco-Customer-Churn-Prediction)
 
 ---
 
